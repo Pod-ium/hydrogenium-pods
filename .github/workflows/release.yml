@@ -1,0 +1,68 @@
+# Release: build the example firmwares (pd_demo, pd_usbprobe) for the
+# PicoCalc + Pico 2 W and attach them to the GitHub release as
+# <pod>_<version>.uf2 (e.g. pd_demo_1.0.0.uf2 for tag v1.0.0), with a
+# SHA256SUMS file.
+#   - pushing a tag v* creates the release (notes generated from the commits)
+#     if it does not exist yet, then attaches the files;
+#   - publishing a release from the GitHub UI attaches them to it;
+#   - it can also be run by hand for an existing tag, to rebuild its files.
+# Pod repositories build against a hydrogenium-pods ref: tag this repository
+# (v1.1.0...) and pin them to it with their PICOPODS_REF variable.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to build and attach firmware to (e.g. v1.0.0)"
+        required: true
+
+permissions:
+  contents: write   # create the release, upload release assets
+
+env:
+  PICO_SDK_REF: "2.1.1"
+  TAG: ${{ inputs.tag || github.event.release.tag_name || github.ref_name }}
+
+concurrency:
+  group: release-${{ inputs.tag || github.event.release.tag_name || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  firmware:
+    name: Build and attach .uf2
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - name: Pico SDK
+        uses: actions/checkout@v4
+        with:
+          repository: raspberrypi/pico-sdk
+          ref: ${{ env.PICO_SDK_REF }}
+          path: pico-sdk
+          submodules: true
+      - name: Packages
+        run: >
+          sudo apt-get update && sudo apt-get install -y cmake ninja-build python3
+          gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+      - name: Build
+        env:
+          PICO_SDK_PATH: ${{ github.workspace }}/pico-sdk
+          CMAKE_GENERATOR: Ninja
+        run: tools/package_release.sh "$TAG" dist
+      - name: Create the release (tag push)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --title "$TAG"
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"

@@ -1,0 +1,99 @@
+# Runs the merge gates of docs/ROADMAP.md on every push and pull request:
+# G-host (PC build + ctest of the libraries and the examples), G-fw (firmware
+# for each supported board, with the .uf2 files kept as build artifacts) and
+# G-web (the examples built for the browser, artifact hydrogenium-web-pods).
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  PICO_SDK_REF: "2.1.1"
+
+jobs:
+  host:
+    name: G-host (PC build + tests)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pico SDK (BTstack sources for the Bluetooth tests)
+        uses: actions/checkout@v4
+        with:
+          repository: raspberrypi/pico-sdk
+          ref: ${{ env.PICO_SDK_REF }}
+          path: pico-sdk
+          submodules: true
+      - name: Packages
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build g++ python3 libmbedtls-dev libsdl2-dev unzip
+      - name: Gate
+        env:
+          PICO_SDK_PATH: ${{ github.workspace }}/pico-sdk
+          CMAKE_GENERATOR: Ninja
+        run: tools/gate.sh host
+      - name: Test log
+        if: always()
+        run: cat build-gate/host-ctest.log || true
+
+  firmware:
+    name: G-fw (${{ matrix.board }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [pico2_w, pico2, pico_w, pico]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pico SDK
+        uses: actions/checkout@v4
+        with:
+          repository: raspberrypi/pico-sdk
+          ref: ${{ env.PICO_SDK_REF }}
+          path: pico-sdk
+          submodules: true
+      - name: Packages
+        run: >
+          sudo apt-get update && sudo apt-get install -y cmake ninja-build g++ python3
+          gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+      - name: Gate
+        env:
+          PICO_SDK_PATH: ${{ github.workspace }}/pico-sdk
+          CMAKE_GENERATOR: Ninja
+        run: tools/gate.sh fw ${{ matrix.board }}
+      - name: Build log
+        if: failure()
+        run: tail -n 100 build-gate/fw-${{ matrix.board }}-*.log || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hydrogenium-${{ matrix.board }}
+          path: build-gate/fw-${{ matrix.board }}/**/*.uf2
+          if-no-files-found: error
+
+  web:
+    name: G-web (browser build)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pico SDK (mbedTLS sources)
+        uses: actions/checkout@v4
+        with:
+          repository: raspberrypi/pico-sdk
+          ref: ${{ env.PICO_SDK_REF }}
+          path: pico-sdk
+          submodules: true
+      - name: Packages
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build python3
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.74
+      - name: Build
+        env:
+          PICO_SDK_PATH: ${{ github.workspace }}/pico-sdk
+          CMAKE_GENERATOR: Ninja
+        run: tools/build_web_pods.sh dist/web-pods
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hydrogenium-web-pods
+          path: dist/web-pods
+          if-no-files-found: error

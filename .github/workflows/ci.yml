@@ -55,9 +55,13 @@ jobs:
           path: pico-sdk
           submodules: true
       - name: Packages
-        run: >
-          tools/ci_apt.sh cmake ninja-build g++ python3
-          gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+        run: tools/ci_apt.sh cmake ninja-build g++ python3
+      # Arm's own toolchain (~150 MB, cached): the Ubuntu packages are 588 MB
+      # and the runners' mirror is often too slow to fetch them.
+      - name: Arm toolchain
+        uses: carlosperate/arm-none-eabi-gcc-action@v1
+        with:
+          release: "13.2.Rel1"
       - name: Gate
         env:
           PICO_SDK_PATH: ${{ github.workspace }}/pico-sdk

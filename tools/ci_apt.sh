@@ -3,9 +3,11 @@
 #
 #   tools/ci_apt.sh <package...>
 #
-# On GitHub's runners an apt-get run now and then hangs for hours instead of
-# failing; each attempt here is stopped after a few minutes and retried, and
-# the man-db index rebuild (slow, not needed in CI) is turned off.
+# On GitHub's runners the Ubuntu mirror is now and then so slow that an
+# apt-get run takes hours; each attempt here is stopped after a few minutes
+# and retried (packages already fetched are kept), and the man-db index
+# rebuild (slow, not needed in CI) is turned off. Keep big downloads out of
+# apt: the Arm toolchain comes from arm-none-eabi-gcc-action.
 set -eu
 sudo rm -f /var/lib/man-db/auto-update
 for attempt in 1 2 3; do

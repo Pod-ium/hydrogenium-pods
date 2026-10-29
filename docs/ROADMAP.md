@@ -78,7 +78,7 @@ CI (G-host, G-fw, G-web on every push and pull request) and release workflow
 | Repository | Content |
 |---|---|
 | hydrogenium-pods | the libraries (`lib/`, `cmake/`), the examples, the library tests, these docs |
-| helium-pods | games: PicoCraft |
+| helium-pods | games: PodCraft |
 | carbo-pods | productivity: Pod Writer, Pod Files |
 | aurum-pods | emulators: PodBoy; PicoPods Web (`web/`, the site with every pod, GitHub Pages) |
 

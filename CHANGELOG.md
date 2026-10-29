@@ -5,7 +5,7 @@
 ### Repository split
 - The PicoPods tree is split into the Pod-ium repositories: this one keeps
   the libraries, the examples, the library tests and the docs; the pods move
-  to helium-pods (PicoCraft), carbo-pods (Pod Writer, Pod Files) and
+  to helium-pods (PodCraft), carbo-pods (Pod Writer, Pod Files) and
   aurum-pods (PodBoy, PicoPods Web). Their scripted host tests moved with them.
 - `cmake/picopods_import.cmake`: pod repositories find the libraries through
   `PICOPODS_PATH` or fetch them with git (`PICOPODS_FETCH_FROM_GIT_TAG`).

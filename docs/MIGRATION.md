@@ -1,6 +1,6 @@
 # Moving PicoCalc Writer and PicoBoy onto the common libraries
 
-Both firmwares have been ported: see `pods/podwriter` of [carbo-pods](https://github.com/Pod-ium/carbo-pods) (Writer 3.0, now Pod Writer) and `pods/podboy` of [aurum-pods](https://github.com/Pod-ium/aurum-pods) (PicoBoy 1.1, now PodBoy); PicoCraft is in [helium-pods](https://github.com/Pod-ium/helium-pods). The pods were developed in the single PicoPods tree (Pod-ium/PicoPods) before it was split into these repositories. The original 2.1.0 / 1.0 sources are in the history of Pod-ium/PicoPods (commits "Import PicoCalc Writer 2.1.0" and "Import PicoBoy 1.0", folder `legacy/`, removed once the pods were in place). This is the map from their original code to the libraries, useful to follow the port or to move other PicoCalc firmware the same way.
+Both firmwares have been ported: see `pods/podwriter` of [carbo-pods](https://github.com/Pod-ium/carbo-pods) (Writer 3.0, now Pod Writer) and `pods/podboy` of [aurum-pods](https://github.com/Pod-ium/aurum-pods) (PicoBoy 1.1, now PodBoy); PicoCraft (now PodCraft) is in [helium-pods](https://github.com/Pod-ium/helium-pods). The pods were developed in the single PicoPods tree (Pod-ium/PicoPods) before it was split into these repositories. The original 2.1.0 / 1.0 sources are in the history of Pod-ium/PicoPods (commits "Import PicoCalc Writer 2.1.0" and "Import PicoBoy 1.0", folder `legacy/`, removed once the pods were in place). This is the map from their original code to the libraries, useful to follow the port or to move other PicoCalc firmware the same way.
 
 ## PicoCalc Writer 2.1.0
 
@@ -48,7 +48,7 @@ Keep in mind that dialogs do not flush the keyboard: call `ui.kbd.flush()` befor
 
 ## PicoCraft 1.7
 
-PicoCraft came from outside the tree (a standalone Pico SDK project with its own drivers) and is now `pods/picocraft` (1.8). Its game engine moved over unchanged apart from C → C++; every hardware file was replaced.
+PicoCraft came from outside the tree (a standalone Pico SDK project with its own drivers) and is now PodCraft, `pods/podcraft`. Its game engine moved over unchanged apart from C → C++; every hardware file was replaced.
 
 | PicoCraft 1.7 | PicoPods | Notes |
 |---|---|---|
@@ -58,7 +58,7 @@ PicoCraft came from outside the tree (a standalone Pico SDK project with its own
 | `src/sdcard.c`, `src/fatfs/`, `src/storage.c` | `pd_fs` | Same save format. The card is mounted on first save/load, so the game starts without one. |
 | `src/fault.c` | `pd_diag` | Crash screen for HardFault and panic. |
 | `multicore_launch_core1` + FIFO, rows split even/odd | `sys::launch_core1` + `render_claimed()` | Rows are handed out by an atomic counter, so core 0 can also feed the display and read the keyboard. No core 1 (browser): core 0 renders everything. |
-| `host/` (PC test programs) | host terminal | The pod runs on the PC (window or scripted keys, test `picocraft_script`) and in the browser. |
+| `host/` (PC test programs) | host terminal | The pod runs on the PC (window or scripted keys, test `podcraft_script`) and in the browser. |
 
 ## From picodev to PicoPods
 

@@ -8,7 +8,7 @@ PicoPods separates three things that change independently:
 |---|---|---|---|
 | **Board** — the programmable module | Pico, Pico W, Pico 2, Pico 2 W, RP2350 boards with PSRAM | `pd/board.h`, `lib/hardware/core/src/sys_rp2.cpp` | `-DPD_BOARD=` (Pico SDK board name) |
 | **Terminal** — the device the board plugs into | PicoCalc, the PC (`host`) | `lib/hardware/terminals/<name>` | `-DPD_TERMINAL=` |
-| **Pod** — your firmware | PodBoy, Pod Writer, Pod Files, PicoCraft | `pods/<name>` of a pod repository (helium-, carbo-, aurum-pods); examples: `examples/<name>` here | `picopods_add_pod()` |
+| **Pod** — your firmware | PodBoy, Pod Writer, Pod Files, PodCraft | `pods/<name>` of a pod repository (helium-, carbo-, aurum-pods); examples: `examples/<name>` here | `picopods_add_pod()` |
 
 Apps never name a pin, an SPI instance or a chip. They see the terminal through HAL interfaces and ask the board what it can do.
 

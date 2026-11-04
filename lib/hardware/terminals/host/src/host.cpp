@@ -84,7 +84,8 @@ struct Step {
     bool shot = false;
 };
 
-uint8_t named_key(const std::string& t) {
+// A named key ("esc", "f3"...), or 0. Case-insensitive.
+uint8_t key_by_name(const std::string& t) {
     static const struct { const char* n; uint8_t c; } names[] = {
         {"up", key::Up}, {"down", key::Down}, {"left", key::Left}, {"right", key::Right},
         {"enter", key::Enter}, {"esc", key::Esc}, {"bksp", key::Backspace}, {"backspace", key::Backspace},
@@ -94,11 +95,18 @@ uint8_t named_key(const std::string& t) {
         {"f6", key::F6}, {"f7", key::F7}, {"f8", key::F8}, {"f9", key::F9}, {"f10", key::F10},
         {"comma", ','}, {"break", key::Break},
     };
-    if (t.size() == 1) return uint8_t(t[0]);
     std::string l = t;
     for (char& c : l) c = char(tolower(c));
     for (const auto& n : names)
         if (l == n.n) return n.c;
+    return 0;
+}
+
+uint8_t named_key(const std::string& t) {
+    if (t.size() == 1) return uint8_t(t[0]);
+    if (const uint8_t c = key_by_name(t)) return c;
+    std::string l = t;
+    for (char& c : l) c = char(tolower(c));
     if (l.size() > 2 && l[0] == '0' && l[1] == 'x') return uint8_t(strtoul(l.c_str() + 2, nullptr, 16));
     fprintf(stderr, "[host] unknown key token '%s'\n", t.c_str());
     return 0;
@@ -133,6 +141,7 @@ Step parse_token(const std::string& tok) {
         if (m == "ctrl") mods.push_back(key::Ctrl);
         else if (m == "shift") mods.push_back(key::ShiftL);
         else if (m == "alt") mods.push_back(key::Alt);
+        else if (const uint8_t held = m.size() > 1 ? key_by_name(m) : 0) mods.push_back(held);   // esc+up
         else break;
         rest = rest.substr(plus + 1);
     }

@@ -9,6 +9,7 @@
 //              tokens: up down left right enter esc bksp tab space del ins home
 //              end pgup pgdn f1..f10 comma, a single character ("a", "A", "?"),
 //              0xNN, ctrl+x / shift+x / alt+x, text:hello (types the text),
+//              any named key held while the next is tapped: esc+up, f1+a,
 //              wait:250 (ms), shot (dump a frame now)
 //              set but empty: no key ever arrives (for tests that inject keys)
 //   PD_FRAMES  folder for frame dumps: one PPM each time a key token starts,

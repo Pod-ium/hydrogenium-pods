@@ -20,6 +20,9 @@
   keyboard, sound; F12 saves a screenshot). Opens when `PD_KEYS` is not set;
   `PD_WINDOW`, `PD_SCALE`; built when SDL2 is found (`-DPD_HOST_SDL`).
   Headless runs and the tests are unchanged.
+- Host key scripts (`PD_KEYS`) can hold any named key while the next one is
+  tapped, like the modifiers: `esc+up`, `f1+a` (PodABC's way back to its
+  menu is Esc and Up together).
 
 - PicoPods Web: the pods in a browser (the page is now in aurum-pods), with
   a touch PicoCalc keyboard, sound, an IndexedDB SD card and pod files that

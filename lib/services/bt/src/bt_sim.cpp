@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "bt_scan.h"
 #include "obex_receiver.h"
 #include "pd/bt.h"
 #include "pd/sys.h"
@@ -21,7 +22,7 @@ namespace pd::bt {
 namespace {
 bool g_on = false;
 bool g_listening = false;
-uint32_t g_scan_until = 0;
+detail::ScanState g_scan;
 detail::ObexReceiver g_rx;
 std::vector<std::vector<uint8_t>> g_packets;   // simulated incoming requests
 size_t g_pkt = 0, g_pkt_pos = 0;
@@ -106,7 +107,8 @@ void poll() {
     const uint32_t now = sys::now_ms();
     // The phone starts pairing on its own once the search is over (PD_BT_SIM_PHONE_PAIR).
     static bool phone_paired_once = false;
-    if (getenv("PD_BT_SIM_PHONE_PAIR") && !phone_paired_once && g_scan_until && sys::reached(g_scan_until + 400)) {
+    if (getenv("PD_BT_SIM_PHONE_PAIR") && !phone_paired_once && g_scan.deadline &&
+        detail::ScanState::reached(now, g_scan.deadline + 400)) {
         phone_paired_once = true;
         g_pair = PairRequest{"Pixel 9a", 715034, false};
         g_pair_pending = true;
@@ -170,18 +172,23 @@ void pair_answer(bool accept) {
 }
 
 bool scan_start() {
-    g_scan_until = sys::now_ms() + 1500;
+    g_scan.request(sys::now_ms(), 1500);   // while a search runs it just extends it (the CYW43 refuses a second Inquiry)
     return true;
 }
 void scan_stop() {
-    if (!sys::reached(g_scan_until)) g_scan_until = sys::now_ms();   // end now, keep what was found
+    g_scan.stop(sys::now_ms());   // end now, keep what was found
 }
-bool scanning() { return !sys::reached(g_scan_until); }
-std::string scan_error() { return getenv("PD_BT_SIM_SCAN_FAIL") ? "the radio refused to search (status 0x0C)" : ""; }
+bool scanning() {
+    g_scan.expired(sys::now_ms());
+    return g_scan.active;
+}
+std::string scan_error() {
+    return getenv("PD_BT_SIM_SCAN_FAIL") ? "the radio refused to search (status 0x0C)" : g_scan.error;
+}
 std::vector<Device> devices() {
     std::vector<Device> d;
     if (getenv("PD_BT_SIM_SCAN_FAIL")) return d;
-    const bool found = g_scan_until && sys::reached(g_scan_until);
+    const bool found = g_scan.deadline && detail::ScanState::reached(sys::now_ms(), g_scan.deadline);
     for (const std::string& a : g_paired_list) d.push_back(Device{a, "Pixel 8", 0x5a020c, true});
     if (found) {
         if (g_paired_list.empty()) d.push_back(Device{"A4:C3:F0:12:34:56", "Pixel 8", 0x5a020c, false});

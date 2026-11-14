@@ -31,7 +31,7 @@ cmake/        picopods_init.cmake (before project()), picopods.cmake (after proj
 lib/          libraries by layer: hardware/ services/ interface/ content/  (catalogue: lib/README.md)
 examples/     demo/ (pd_demo: library tour + hardware check), template/ (pd_template), usbprobe/
 tests/        library host tests (ctest), test data in tests/data/, Python checkers
-tools/        gate.sh, package_release.sh, build_web_pods.sh, ci_ref.sh, ci_apt.sh, gen_fonts.py
+tools/        gate.sh, package_release.sh, package_test.sh, build_web_pods.sh, ci_ref.sh, ci_apt.sh, gen_fonts.py
 docs/         ARCHITECTURE.md, PORTING.md, MIGRATION.md, ROADMAP.md
 ```
 

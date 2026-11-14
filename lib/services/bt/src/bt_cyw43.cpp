@@ -7,6 +7,7 @@
 #include <cstring>
 #include <map>
 
+#include "bt_scan.h"
 #include "btstack_modules.h"
 #include "obex_receiver.h"
 #include "pd/bt.h"
@@ -83,9 +84,7 @@ std::map<std::string, uint8_t> g_remote_io;   // address -> IO capability
 
 // devices
 std::vector<Device> g_found;
-bool g_scanning = false;
-uint32_t g_scan_deadline = 0;
-std::string g_scan_error;
+detail::ScanState g_scan;
 std::vector<std::string> g_name_queue;   // addresses to ask for names
 std::map<std::string, std::pair<uint8_t, uint16_t>> g_page_info;
 bool g_name_busy = false;
@@ -182,7 +181,7 @@ void register_sdp() {
 
 // ---------------------------------------------------------------- scanning
 void next_name_request() {
-    if (g_name_busy || g_scanning || g_name_queue.empty()) return;
+    if (g_name_busy || g_scan.active || g_name_queue.empty()) return;
     const std::string a = g_name_queue.front();
     g_name_queue.erase(g_name_queue.begin());
     bd_addr_t addr;
@@ -556,11 +555,10 @@ void hci_handler(uint8_t type, uint16_t channel, uint8_t* packet, uint16_t size)
                 ++g_diag.failed_count;
                 // BTstack resets its inquiry state on a refused Inquiry but
                 // sends no INQUIRY_COMPLETE: end the search here.
-                if (op == HCI_OPCODE_HCI_INQUIRY && g_scanning) {
-                    g_scanning = false;
+                if (op == HCI_OPCODE_HCI_INQUIRY && g_scan.active) {
                     char b[64];
                     snprintf(b, sizeof b, "the radio refused to search (status 0x%02X)", st);
-                    g_scan_error = b;
+                    g_scan.refused(b);
                 }
             }
             break;
@@ -631,7 +629,7 @@ void hci_handler(uint8_t type, uint16_t channel, uint8_t* packet, uint16_t size)
         }
         case GAP_EVENT_INQUIRY_COMPLETE:
             logf("search done, %lu found", (unsigned long)g_diag.inquiry_results);
-            g_scanning = false;
+            g_scan.complete();
             next_name_request();
             break;
         case HCI_EVENT_REMOTE_NAME_REQUEST_COMPLETE: {
@@ -773,7 +771,7 @@ bool powered() { return g_powered; }
 
 void poll() {
     net::poll();
-    if (g_tx_wait_scan && (!g_scanning || g_tx == Tx::Idle)) {
+    if (g_tx_wait_scan && (!g_scan.active || g_tx == Tx::Idle)) {
         g_tx_wait_scan = false;
         if (g_tx != Tx::Idle && !g_tx_cancel && !tx_connect()) finish_send(SendState::Failed, "could not start the connection");
     }
@@ -790,7 +788,7 @@ void poll() {
             g_resetting = true;
             g_cmd_blocked_since = 0;
             if (g_tx != Tx::Idle) finish_send(SendState::Failed, "the radio stopped answering (it was reset, please try again)");
-            g_scanning = false;
+            g_scan.complete();
             hci_power_control(HCI_POWER_OFF);
         }
     }
@@ -840,27 +838,28 @@ void pair_answer(bool accept) {
 }
 
 bool scan_start() {
-    g_scan_error.clear();
     if (!g_powered) {
-        g_scan_error = "Bluetooth is off";
+        g_scan.error = "Bluetooth is off";
         return false;
     }
-    g_found.clear();
-    g_name_queue.clear();
-    g_diag.inquiry_results = 0;
     // Visible while searching too, so the other side can find us as well.
     gap_connectable_control(1);
     gap_discoverable_control(1);
     g_diag.discoverable = true;
+    if (!g_scan.request(sys::now_ms(), 15000))   // the controller should finish in ~8 s
+        return true;   // a search is already running: wait for it, never send a second Inquiry
+    g_found.clear();
+    g_name_queue.clear();
+    g_diag.inquiry_results = 0;
     const int rc = gap_inquiry_start(6);   // 6 x 1.28 s, never cancelled (see scan_stop)
-    g_scanning = rc == 0;
-    if (!g_scanning) {
+    if (rc == ERROR_CODE_COMMAND_DISALLOWED) return true;   // BTstack still counts the previous inquiry as active
+    if (rc != 0) {
         char b[48];
         snprintf(b, sizeof b, "search could not start (0x%02X)", unsigned(rc));
-        g_scan_error = b;
+        g_scan.refused(b);
+        return false;
     }
-    g_scan_deadline = sys::now_ms() + 15000;   // the controller should finish in ~8 s
-    return g_scanning;
+    return true;
 }
 
 void scan_stop() {
@@ -875,15 +874,14 @@ void scan_stop() {
 }
 
 bool scanning() {
-    if (g_scanning && sys::reached(g_scan_deadline)) {
-        g_scanning = false;
-        if (g_found.empty()) g_scan_error = "the search did not finish (no answer from the radio)";
-    }
-    if (!g_scanning && g_name_busy && sys::reached(g_scan_deadline + 10000)) g_name_busy = false;   // a stuck name request
-    return g_scanning || g_name_busy || !g_name_queue.empty();
+    if (g_scan.expired(sys::now_ms()) && g_found.empty())
+        g_scan.error = "the search did not finish (no answer from the radio)";
+    if (!g_scan.active && g_name_busy && detail::ScanState::reached(sys::now_ms(), g_scan.deadline + 10000))
+        g_name_busy = false;   // a stuck name request
+    return g_scan.active || g_name_busy || !g_name_queue.empty();
 }
 
-std::string scan_error() { return g_scan_error; }
+std::string scan_error() { return g_scan.error; }
 
 std::vector<Device> devices() {
     std::vector<Device> out;
@@ -985,7 +983,7 @@ bool send_start(const std::string& addr, const std::vector<std::string>& paths) 
     g_key_dropped_addr.clear();
     g_tx_fail_status = 0;
     (void)a;
-    if (g_scanning) {   // the search must end first (it is never cancelled)
+    if (g_scan.active) {   // the search must end first (it is never cancelled)
         g_tx_wait_scan = true;
         g_tx = Tx::W4Open;
         logf("send: waiting for the search to end");
@@ -1041,7 +1039,7 @@ void detail::on_stack_deinit() {
     g_rx.closed();
     g_rx_reply = detail::ObexReceiver::Reply::None;
     if (g_tx != Tx::Idle) finish_send(SendState::Failed, "Bluetooth turned off");
-    g_scanning = false;
+    g_scan.complete();
     g_name_busy = false;
     g_name_queue.clear();
     g_pair_pending = false;

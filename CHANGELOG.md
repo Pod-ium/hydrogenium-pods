@@ -16,6 +16,12 @@
   `tools/ci_ref.sh` picks the sibling repository's ref in CI.
 
 ### Libraries
+- `pd_bt`: `scan_start()` while a search is still running no longer fails
+  with "search could not start (0x0C)". The CYW43 refuses a second HCI
+  Inquiry (Command Disallowed) and Inquiry Cancel is unreliable there, so
+  the search is now left running and waited for (`lib/services/bt/src/bt_scan.h`,
+  host-tested in `tests/bt_scan_test.cpp`). Symptom: "Search failed" when
+  sending a file right after a cancelled or previous search.
 - Host terminal: interactive SDL2 window for every pod (screen, live
   keyboard, sound; F12 saves a screenshot). Opens when `PD_KEYS` is not set;
   `PD_WINDOW`, `PD_SCALE`; built when SDL2 is found (`-DPD_HOST_SDL`).

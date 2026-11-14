@@ -72,6 +72,10 @@ if(PD_HAS_TLS)
     endif()
 endif()
 
+# pd_bt scan state machine (host-testable part of the device backend).
+pd_host_test(bt_scan_test SOURCES bt_scan_test.cpp LIBS pd_core)
+add_test(NAME bt_scan COMMAND bt_scan_test)
+
 # Bluetooth OBEX receiver (real OBEX packets from BTstack's builder).
 if(PD_HAS_BT)
     pd_host_test(obex_receiver_test SOURCES obex_receiver_test.cpp LIBS pd_bt)

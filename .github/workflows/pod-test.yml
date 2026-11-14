@@ -1,0 +1,82 @@
+# Pod test build: build the example firmwares (pd_demo, pd_usbprobe) for the
+# board chosen in the input (PicoCalc + Pico 2 W by default) and publish them
+# as the repository's test "package": the pre-release tagged `test`, with one
+# <pod>-test.uf2 asset per pod (e.g. pd_demo-test.uf2) and SHA256SUMS-test.txt.
+# Run it by hand from the branch to test on hardware:
+#   Actions -> "Pod test build" -> Run workflow (this branch), then download
+#   <pod>-test.uf2 from the `test` release on the Releases page.
+# Like release.yml, but it never touches a v* release: the `test` tag is only
+# a container for the test files.
+name: Pod test build
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch, tag or SHA to build (empty = the branch the workflow runs from)"
+        required: false
+        default: ""
+      board:
+        description: "Board to build for (the PicoCalc is pico2_w)"
+        required: true
+        type: choice
+        default: "pico2_w"
+        options: [pico2_w, pico2, pico_w, pico]
+
+permissions:
+  contents: write   # create the `test` pre-release, upload release assets
+
+env:
+  PICO_SDK_REF: "2.1.1"
+  TEST_TAG: "test"
+
+concurrency:
+  group: pod-test
+  cancel-in-progress: true
+
+jobs:
+  firmware:
+    name: Build and publish <pod>-test.uf2
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - name: Pico SDK
+        uses: actions/checkout@v4
+        with:
+          repository: raspberrypi/pico-sdk
+          ref: ${{ env.PICO_SDK_REF }}
+          path: pico-sdk
+          submodules: true
+      - name: Packages
+        run: tools/ci_apt.sh cmake ninja-build python3
+      # Arm's own toolchain (~150 MB, cached): the Ubuntu packages are 588 MB
+      # and the runners' mirror is often too slow to fetch them.
+      - name: Arm toolchain
+        uses: carlosperate/arm-none-eabi-gcc-action@v1
+        with:
+          release: "13.2.Rel1"
+      - name: Build
+        env:
+          PICO_SDK_PATH: ${{ github.workspace }}/pico-sdk
+          CMAKE_GENERATOR: Ninja
+          PD_BOARD: ${{ inputs.board }}
+        run: tools/package_test.sh dist-test
+      - name: Create the test pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$TEST_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
+            gh release create "$TEST_TAG" --repo "$GITHUB_REPOSITORY" --prerelease \
+              --title "Pod test build" \
+              --notes "Firmware built by the *Pod test build* workflow for hardware testing: one \`<pod>-test.uf2\` per pod, for the board chosen in the workflow input. Test build, not a release."
+      - name: Publish the package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TEST_TAG" dist-test/* --clobber --repo "$GITHUB_REPOSITORY"
+      - name: List the package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release view "$TEST_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name'

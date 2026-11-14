@@ -27,6 +27,11 @@
   clock (Asyncify); `pd_net` has no Wi-Fi there.
 
 ### Build and CI
+- New "Pod test build" workflow (`.github/workflows/pod-test.yml`,
+  `tools/package_test.sh`): run by hand from the Actions tab on any branch to
+  build the pods for a board and attach them to the `test` pre-release as
+  `<pod>-test.uf2` (e.g. `pd_demo-test.uf2`) plus `SHA256SUMS-test.txt`, for
+  flashing and testing on hardware.
 - G-host installs `libsdl2-dev`, so the window code is compiled on every push.
 - G-web builds the browser pods on every push; PicoPods Web and its
   GitHub Pages workflow are now in aurum-pods.

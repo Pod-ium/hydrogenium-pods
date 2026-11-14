@@ -76,6 +76,11 @@ and flash-cache screens.
   and `SHA256SUMS_<version>.txt` are attached (tag `v1.2.0` gives version
   `1.2.0`). Locally: `PICO_SDK_PATH=… tools/package_release.sh <version>`.
   It can also be run by hand from the Actions tab for an existing tag.
+- **Test builds for hardware** (`.github/workflows/pod-test.yml`): run by
+  hand from the Actions tab on any branch; builds the pods for the chosen
+  board and publishes them to the `test` pre-release as `pd_demo-test.uf2`,
+  `pd_usbprobe-test.uf2` and `SHA256SUMS-test.txt`. Locally:
+  `PICO_SDK_PATH=… tools/package_test.sh`.
 
 The pod repositories build against this repository's `main` by default.
 To pin them to a release of the libraries, tag it here and set their

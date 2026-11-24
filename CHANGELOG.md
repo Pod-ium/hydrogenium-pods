@@ -21,7 +21,8 @@
   Inquiry (Command Disallowed) and Inquiry Cancel is unreliable there, so
   the search is now left running and waited for (`lib/services/bt/src/bt_scan.h`,
   host-tested in `tests/bt_scan_test.cpp`). Symptom: "Search failed" when
-  sending a file right after a cancelled or previous search.
+  sending a file right after a cancelled or previous search. A search that
+  times out without INQUIRY_COMPLETE is now logged in the diagnostics.
 - Host terminal: interactive SDL2 window for every pod (screen, live
   keyboard, sound; F12 saves a screenshot). Opens when `PD_KEYS` is not set;
   `PD_WINDOW`, `PD_SCALE`; built when SDL2 is found (`-DPD_HOST_SDL`).

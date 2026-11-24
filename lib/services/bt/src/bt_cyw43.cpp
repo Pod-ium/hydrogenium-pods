@@ -874,8 +874,10 @@ void scan_stop() {
 }
 
 bool scanning() {
-    if (g_scan.expired(sys::now_ms()) && g_found.empty())
+    if (g_scan.expired(sys::now_ms()) && g_found.empty()) {
         g_scan.error = "the search did not finish (no answer from the radio)";
+        logf("search timed out: no INQUIRY_COMPLETE, %lu results", (unsigned long)g_diag.inquiry_results);
+    }
     if (!g_scan.active && g_name_busy && detail::ScanState::reached(sys::now_ms(), g_scan.deadline + 10000))
         g_name_busy = false;   // a stuck name request
     return g_scan.active || g_name_busy || !g_name_queue.empty();

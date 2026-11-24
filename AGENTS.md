@@ -15,7 +15,7 @@ foundation of the Pod-ium family:
 |---|---|---|
 | **hydrogenium-pods** (here) | `lib/`, `cmake/`, `examples/`, library tests, `docs/` | — |
 | helium-pods | games (PodCraft) | `picopods_import.cmake` |
-| carbo-pods | productivity (Pod Writer, Pod Files) | `picopods_import.cmake` |
+| carbo-pods | productivity (Pod Writer, Pod Files, Pod Tunes) | `picopods_import.cmake` |
 | aurum-pods | emulators (PodBoy), PicoPods Web | `picopods_import.cmake` |
 
 **The three pod repositories build against this repository's `main`.** A

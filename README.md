@@ -18,7 +18,7 @@ The firmwares built on them, the **pods**, live in their own repositories:
 | Repository | Pods |
 |---|---|
 | [helium-pods](https://github.com/Pod-ium/helium-pods) | Games: **PodCraft**, **The Last Bell** |
-| [carbo-pods](https://github.com/Pod-ium/carbo-pods) | Productivity: **Pod Writer**, **Pod Files** |
+| [carbo-pods](https://github.com/Pod-ium/carbo-pods) | Productivity: **Pod Writer**, **Pod Files**, **Pod Tunes** |
 | [aurum-pods](https://github.com/Pod-ium/aurum-pods) | Emulators: **PodBoy**, and **PicoPods Web** (every pod in the browser) |
 
 They were all one tree, [Pod-ium/PicoPods](https://github.com/Pod-ium/PicoPods),
